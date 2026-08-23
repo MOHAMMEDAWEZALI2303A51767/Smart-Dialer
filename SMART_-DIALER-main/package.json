@@ -1,0 +1,29 @@
+{
+  "name": "smart-dialer",
+  "version": "1.0.0",
+  "description": "Production-grade SmartDialer prototype with Progressive & Predictive pacing, Safety Controller, and interactive simulation dashboard",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "simulate": "tsx src/simulation/dialer-simulator.ts",
+    "loadtest": "tsx src/simulation/load-tester.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dashboard": "tsx src/server/app.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.0",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

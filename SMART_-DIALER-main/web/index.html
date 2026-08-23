@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDialer — Live Control Dashboard</title>
+  <meta name="description" content="Production-Grade Predictive Dialer Dashboard with Real-Time Monitoring & Chaos Controls">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-card: rgba(17, 24, 39, 0.75);
+      --bg-card-hover: rgba(31, 41, 55, 0.85);
+      --border: rgba(75, 85, 99, 0.4);
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #8b5cf6;
+      --accent-pink: #ec4899;
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding: 18px 24px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff 0%, #9ca3af 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header h1 span {
+      font-weight: 400;
+      font-size: 13px;
+      color: var(--text-muted);
+      -webkit-text-fill-color: var(--text-muted);
+      display: block;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .status-badge.running {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-badge.stopped {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .full-width { grid-column: 1 / -1; }
+    .half-width { grid-column: span 2; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .icon { font-size: 15px; }
+
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .metric-value.green { color: var(--accent-green); }
+    .metric-value.blue { color: var(--accent-blue); }
+    .metric-value.yellow { color: var(--accent-yellow); }
+    .metric-value.red { color: var(--accent-red); }
+    .metric-value.cyan { color: var(--accent-cyan); }
+    .metric-value.purple { color: var(--accent-purple); }
+
+    /* Agent Grid */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .agent-dot {
+      height: 36px;
+      border-radius: 8px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      color: #fff;
+      position: relative;
+      user-select: none;
+    }
+
+    .agent-dot:hover {
+      transform: scale(1.15);
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .agent-dot.available { background: var(--accent-green); box-shadow: 0 0 8px rgba(16, 185, 129, 0.35); }
+    .agent-dot.reserved { background: var(--accent-yellow); box-shadow: 0 0 8px rgba(245, 158, 11, 0.35); }
+    .agent-dot.dialing { background: var(--accent-blue); box-shadow: 0 0 8px rgba(59, 130, 246, 0.35); animation: dialPulse 1s ease-in-out infinite; }
+    .agent-dot.connected { background: var(--accent-cyan); box-shadow: 0 0 8px rgba(6, 182, 212, 0.35); }
+    .agent-dot.wrapup { background: var(--accent-purple); box-shadow: 0 0 8px rgba(139, 92, 246, 0.35); }
+    .agent-dot.paused { background: var(--text-muted); opacity: 0.8; }
+    .agent-dot.offline { background: rgba(75, 85, 99, 0.3); color: var(--text-muted); }
+
+    @keyframes dialPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .agent-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--glass-border);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+
+    /* Controls */
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 12px 14px;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: var(--glass-bg);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn:active { transform: translateY(0); }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn.danger {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .btn.danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fff;
+    }
+
+    .btn.success {
+      background: rgba(16, 185, 129, 0.18);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #6ee7b7;
+    }
+
+    .btn.success:hover {
+      background: rgba(16, 185, 129, 0.3);
+      color: #fff;
+    }
+
+    .btn.warning {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #fde68a;
+    }
+
+    .btn.warning:hover {
+      background: rgba(245, 158, 11, 0.3);
+      color: #fff;
+    }
+
+    /* Progress Bars */
+    .progress-bar-container {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      height: 6px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+
+    /* Safety Meter */
+    .safety-meter {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+      transition: all 0.4s ease;
+    }
+
+    .safety-meter.warning {
+      background: rgba(245, 158, 11, 0.08);
+      border-color: rgba(245, 158, 11, 0.25);
+    }
+
+    .safety-meter.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .safety-icon { font-size: 24px; }
+    .safety-text { flex: 1; }
+    .safety-text .label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.8px; }
+    .safety-text .value { font-family: 'JetBrains Mono'; font-size: 16px; font-weight: 700; }
+
+    /* Log */
+    .log-container {
+      max-height: 220px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      scrollbar-width: thin;
+      scrollbar-color: var(--glass-border) transparent;
+    }
+
+    .log-entry {
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      animation: fadeIn 0.25s ease;
+    }
+
+    .log-entry .time { color: var(--text-muted); }
+    .log-entry .event { color: var(--accent-cyan); }
+    .log-entry.warn .event { color: var(--accent-yellow); }
+    .log-entry.error .event { color: var(--accent-red); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .stat-item {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-item .stat-value {
+      font-family: 'JetBrains Mono';
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .stat-item .stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+      .half-width { grid-column: span 2; }
+      .controls { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .half-width { grid-column: span 1; }
+      .controls { grid-template-columns: 1fr; }
+      .header { flex-direction: column; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">SD</div>
+        <h1>SmartDialer<span>Production-Grade Predictive Dialer Dashboard</span></h1>
+      </div>
+      <div id="statusBadge" class="status-badge stopped">
+        <div class="status-dot"></div>
+        <span id="statusText">Stopped</span>
+      </div>
+    </header>
+
+    <!-- KPI Row -->
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="card-title"><span class="icon">👤</span> Available Agents</div>
+        <div class="metric-value green" id="availableAgents">0</div>
+        <div class="metric-label"><span id="onlineAgents">0</span> online of <span id="totalAgents">0</span> total</div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="agentBar" style="width:0%; background: var(--accent-green);"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">📞</span> Calls Initiated</div>
+        <div class="metric-value blue" id="callsInitiated">0</div>
+        <div class="metric-label"><span id="callsAnswered">0</span> answered (<span id="connectionRate">0.0%</span>)</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🛡️</span> Abandonment Rate</div>
+        <div class="metric-value green" id="abandonmentRate">0.00%</div>
+        <div class="metric-label">Target: 0.00% Compliance</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">📈</span> Answer Rate</div>
+        <div class="metric-value cyan" id="answerRate">0.0%</div>
+        <div class="metric-label">EMA-smoothed real-time</div>
+      </div>
+    </div>
+
+    <!-- Main Panels -->
+    <div class="dashboard-grid">
+      <!-- Agent Grid -->
+      <div class="card half-width">
+        <div class="card-title"><span class="icon">👥</span> Agent Pool (Live States)</div>
+        <div id="agentGrid" class="agent-grid"></div>
+        <div class="agent-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-green)"></div> Available</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-yellow)"></div> Reserved</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-blue)"></div> Dialing</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-cyan)"></div> Connected</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent-purple)"></div> Wrap-Up</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--text-muted)"></div> Paused</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(75,85,99,0.3)"></div> Offline</div>
+        </div>
+      </div>
+
+      <!-- Safety Controller -->
+      <div class="card half-width">
+        <div class="card-title"><span class="icon">🛡️</span> Safety Controller (Firewall)</div>
+        <div id="safetyMeter" class="safety-meter">
+          <div class="safety-icon">✅</div>
+          <div class="safety-text">
+            <div class="label">ABANDONMENT COMPLIANCE</div>
+            <div class="value green" id="safetyStatus">ZERO ABANDONED — COMPLIANT</div>
+          </div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="stat-value green" id="safetyApproved">0</div>
+            <div class="stat-label">Approved</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value yellow" id="safetyReduced">0</div>
+            <div class="stat-label">Reduced</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value red" id="safetyRejected">0</div>
+            <div class="stat-label">Rejected</div>
+          </div>
+        </div>
+        <div class="stats-row" style="margin-top:8px;">
+          <div class="stat-item">
+            <div class="stat-value purple" id="safetyFallbacks">0</div>
+            <div class="stat-label">Progressive Fallbacks</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value cyan" id="interventionRate">0%</div>
+            <div class="stat-label">Intervention Rate</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="circuitState" style="font-size:13px;">CLOSED</div>
+            <div class="stat-label">Circuit Breaker</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="card half-width">
+        <div class="card-title"><span class="icon">🎛️</span> Dialer & Chaos Controls</div>
+        <div class="controls">
+          <button class="btn primary" id="btnStart" onclick="startDialer()">▶ Start Dialer</button>
+          <button class="btn danger" id="btnStop" onclick="stopDialer()">■ Stop Dialer</button>
+          <button class="btn" onclick="manualCycle()">⟳ Single Cycle</button>
+          <button class="btn success" onclick="addAgents()">+ Add 5 Agents</button>
+          <button class="btn warning" onclick="dropAgents()">⚡ Drop 10 Agents</button>
+          <button class="btn danger" onclick="tripCircuit()">💥 Trip Circuit</button>
+          <button class="btn" onclick="switchPacing('PROGRESSIVE')">1:1 Progressive</button>
+          <button class="btn" onclick="switchPacing('PREDICTIVE')">📊 Predictive</button>
+        </div>
+      </div>
+
+      <!-- Provider & Watchdog -->
+      <div class="card half-width">
+        <div class="card-title"><span class="icon">📡</span> Provider & Telephony Pipeline</div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="stat-value green" id="providerSuccessRate">100%</div>
+            <div class="stat-label">Success Rate</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value blue" id="providerLatency">0ms</div>
+            <div class="stat-label">Avg Latency</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value yellow" id="watchdogReclaimed">0</div>
+            <div class="stat-label">Watchdog Reclaimed</div>
+          </div>
+        </div>
+        <div class="stats-row" style="margin-top:8px;">
+          <div class="stat-item">
+            <div class="stat-value" id="currentRinging">0</div>
+            <div class="stat-label">In-Flight (Ringing)</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value cyan" id="currentConnected">0</div>
+            <div class="stat-label">Active Talking</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="pacingMode" style="font-size:13px;">PROGRESSIVE</div>
+            <div class="stat-label">Active Pacing</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Log -->
+      <div class="card full-width">
+        <div class="card-title"><span class="icon">📋</span> Real-Time Event Log</div>
+        <div id="logContainer" class="log-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    const logContainer = document.getElementById('logContainer');
+    let logEntries = [];
+    const MAX_LOG_ENTRIES = 100;
+
+    // ── SSE Connection ──
+    function connectSSE() {
+      const es = new EventSource(`${API_BASE}/api/events`);
+
+      es.addEventListener('state', (e) => {
+        try {
+          const state = JSON.parse(e.data);
+          updateDashboard(state);
+        } catch (err) {
+          console.error('SSE parse error:', err);
+        }
+      });
+
+      es.addEventListener('agent-drop', (e) => {
+        const data = JSON.parse(e.data);
+        addLog('warn', `⚡ AGENT SHOCK: ${data.dropped} agents logged out, ${data.remaining} available`);
+        refreshState();
+      });
+
+      es.onerror = () => {
+        addLog('error', '📡 SSE connection lost — reconnecting...');
+        setTimeout(connectSSE, 3000);
+      };
+    }
+
+    // ── Dashboard Update ──
+    function updateDashboard(state) {
+      if (!state) return;
+
+      // Agents
+      const agents = state.agents;
+      const online = agents.total - agents.offline;
+      document.getElementById('availableAgents').textContent = agents.available;
+      document.getElementById('totalAgents').textContent = agents.total;
+      document.getElementById('onlineAgents').textContent = online;
+      const agentPct = agents.total > 0 ? (agents.available / agents.total * 100) : 0;
+      document.getElementById('agentBar').style.width = agentPct + '%';
+
+      // Update agent grid
+      renderAgentGrid(agents);
+
+      // Calls
+      const calls = state.calls;
+      document.getElementById('callsInitiated').textContent = calls.totalInitiated;
+      document.getElementById('callsAnswered').textContent = calls.totalAnswered;
+      const connRate = calls.totalInitiated > 0 ? (calls.totalAnswered / calls.totalInitiated * 100).toFixed(1) : '0.0';
+      document.getElementById('connectionRate').textContent = connRate + '%';
+
+      // Rates
+      const abandRate = (calls.abandonmentRate * 100).toFixed(2);
+      const abandEl = document.getElementById('abandonmentRate');
+      abandEl.textContent = abandRate + '%';
+      abandEl.className = 'metric-value ' + (calls.abandonmentRate === 0 ? 'green' : 'red');
+
+      const ansRate = (calls.answerRate * 100).toFixed(1);
+      document.getElementById('answerRate').textContent = ansRate + '%';
+
+      // Safety
+      const safety = state.safety;
+      document.getElementById('safetyApproved').textContent = safety.totalApproved;
+      document.getElementById('safetyReduced').textContent = safety.totalReduced;
+      document.getElementById('safetyRejected').textContent = safety.totalRejected;
+      document.getElementById('safetyFallbacks').textContent = safety.totalForcedProgressive;
+      document.getElementById('interventionRate').textContent =
+        (safety.interventionRate * 100).toFixed(1) + '%';
+
+      // Safety status
+      const meter = document.getElementById('safetyMeter');
+      const safetyStatus = document.getElementById('safetyStatus');
+      if (calls.totalAbandoned > 0) {
+        meter.className = 'safety-meter danger';
+        meter.querySelector('.safety-icon').textContent = '⛔';
+        safetyStatus.textContent = `${calls.totalAbandoned} ABANDONED — VIOLATION!`;
+        safetyStatus.className = 'value red';
+      } else {
+        meter.className = 'safety-meter';
+        meter.querySelector('.safety-icon').textContent = '✅';
+        safetyStatus.textContent = 'ZERO ABANDONED — COMPLIANT';
+        safetyStatus.className = 'value green';
+      }
+
+      // Circuit breaker
+      const cb = state.circuitBreaker;
+      const cbEl = document.getElementById('circuitState');
+      cbEl.textContent = cb.state;
+      cbEl.style.color = cb.state === 'CLOSED'
+        ? 'var(--accent-green)'
+        : cb.state === 'OPEN'
+        ? 'var(--accent-red)'
+        : 'var(--accent-yellow)';
+
+      // Provider
+      const prov = state.providerHealth;
+      document.getElementById('providerSuccessRate').textContent =
+        (prov.successRate * 100).toFixed(1) + '%';
+      document.getElementById('providerLatency').textContent =
+        Math.round(prov.avgLatencyMs) + 'ms';
+
+      // Watchdog
+      document.getElementById('watchdogReclaimed').textContent =
+        state.watchdog.totalAgentsReclaimed;
+
+      // Call pipeline
+      document.getElementById('currentRinging').textContent = calls.currentRinging;
+      document.getElementById('currentConnected').textContent = calls.currentConnected;
+
+      // Allocator
+      const alloc = state.allocator;
+      document.getElementById('pacingMode').textContent = alloc.pacingMode;
+
+      // Status badge
+      const badge = document.getElementById('statusBadge');
+      const statusText = document.getElementById('statusText');
+      if (alloc.running) {
+        badge.className = 'status-badge running';
+        statusText.textContent = `Running (${alloc.pacingMode})`;
+      } else {
+        badge.className = 'status-badge stopped';
+        statusText.textContent = 'Stopped';
+      }
+    }
+
+    function renderAgentGrid(stats) {
+      const grid = document.getElementById('agentGrid');
+
+      const states = [
+        { count: stats.available, cls: 'available', label: 'AVAILABLE' },
+        { count: stats.reserved, cls: 'reserved', label: 'RESERVED' },
+        { count: stats.dialing, cls: 'dialing', label: 'DIALING' },
+        { count: stats.connected, cls: 'connected', label: 'CONNECTED' },
+        { count: stats.wrapUp, cls: 'wrapup', label: 'WRAP-UP' },
+        { count: stats.paused, cls: 'paused', label: 'PAUSED' },
+        { count: stats.offline, cls: 'offline', label: 'OFFLINE' },
+      ];
+
+      let html = '';
+      let agentIndex = 1;
+      for (const s of states) {
+        for (let i = 0; i < s.count; i++) {
+          html += `<div class="agent-dot ${s.cls}" title="Agent #${agentIndex} (${s.label})">${agentIndex}</div>`;
+          agentIndex++;
+        }
+      }
+      grid.innerHTML = html;
+    }
+
+    async function refreshState() {
+      try {
+        const res = await fetch(`${API_BASE}/api/state`);
+        const state = await res.json();
+        updateDashboard(state);
+      } catch (err) {
+        console.error('Refresh state failed:', err);
+      }
+    }
+
+    // ── Controls ──
+    async function startDialer() {
+      const badge = document.getElementById('statusBadge');
+      const statusText = document.getElementById('statusText');
+      badge.className = 'status-badge running';
+      statusText.textContent = 'Starting...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/allocator/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intervalMs: 1500, pacingMode: 'PROGRESSIVE' }),
+        });
+        const data = await res.json();
+        addLog('event', `▶ Dialer started (${data.pacingMode} mode, 1.5s interval)`);
+        await refreshState();
+      } catch (e) {
+        addLog('error', 'Failed to start dialer: ' + e);
+        badge.className = 'status-badge stopped';
+        statusText.textContent = 'Stopped';
+      }
+    }
+
+    async function stopDialer() {
+      const badge = document.getElementById('statusBadge');
+      const statusText = document.getElementById('statusText');
+      badge.className = 'status-badge stopped';
+      statusText.textContent = 'Stopped';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/allocator/stop`, { method: 'POST' });
+        const data = await res.json();
+        addLog('event', '■ Dialer & Watchdog stopped');
+        await refreshState();
+      } catch (e) {
+        addLog('error', 'Failed to stop dialer: ' + e);
+      }
+    }
+
+    async function manualCycle() {
+      try {
+        const res = await fetch(`${API_BASE}/api/allocator/cycle`, { method: 'POST' });
+        const data = await res.json();
+        addLog('event',
+          `⟳ Cycle: requested=${data.proposal.requestedDials} → ` +
+          `approved=${data.verdict.approvedDials} (${data.verdict.decision}), ` +
+          `dialed=${data.dialsSucceeded}`
+        );
+        await refreshState();
+      } catch (e) {
+        addLog('error', 'Manual cycle failed: ' + e);
+      }
+    }
+
+    async function addAgents() {
+      try {
+        const res = await fetch(`${API_BASE}/api/agents/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ count: 5 }),
+        });
+        const data = await res.json();
+        addLog('event', `+ Added ${data.added} agents (total: ${data.total})`);
+        await refreshState();
+      } catch (e) {
+        addLog('error', 'Failed to add agents: ' + e);
+      }
+    }
+
+    async function dropAgents() {
+      try {
+        const res = await fetch(`${API_BASE}/api/agents/drop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ count: 10 }),
+        });
+        const data = await res.json();
+        addLog('warn', `⚡ Dropped ${data.dropped} agents (${data.remaining} available, ${data.totalOnline} online)`);
+        await refreshState();
+      } catch (e) {
+        addLog('error', 'Failed to drop agents: ' + e);
+      }
+    }
+
+    async function tripCircuit() {
+      try {
+        const res = await fetch(`${API_BASE}/api/chaos/circuit-trip`, { method: 'POST' });
+        const data = await res.json();
+        addLog('error', `💥 Circuit breaker tripped: ${data.circuitState}`);
+        await refreshState();
+      } catch (e) {
+        addLog('error', 'Failed to trip circuit: ' + e);
+      }
+    }
+
+    async function switchPacing(mode) {
+      try {
+        const res = await fetch(`${API_BASE}/api/pacing`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode }),
+        });
+        const data = await res.json();
+        addLog('event', `🔄 Pacing mode switched to: ${data.pacingMode}`);
+        await refreshState();
+      } catch (e) {
+        addLog('error', 'Failed to change pacing mode: ' + e);
+      }
+    }
+
+    function addLog(type, message) {
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type === 'warn' ? 'warn' : type === 'error' ? 'error' : ''}`;
+      entry.innerHTML = `<span class="time">[${time}]</span> <span class="event">${message}</span>`;
+
+      logContainer.insertBefore(entry, logContainer.firstChild);
+
+      while (logContainer.children.length > MAX_LOG_ENTRIES) {
+        logContainer.removeChild(logContainer.lastChild);
+      }
+    }
+
+    // ── Initial load ──
+    async function initialLoad() {
+      try {
+        const res = await fetch(`${API_BASE}/api/state`);
+        const state = await res.json();
+        updateDashboard(state);
+        addLog('event', '🚀 Dashboard connected to SmartDialer server');
+      } catch (e) {
+        addLog('error', '⚠ Cannot connect to server — make sure `npm run dashboard` is running');
+      }
+    }
+
+    initialLoad();
+    connectSSE();
+  </script>
+</body>
+</html>
